@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const clientModel = require('../models/client');
 require('dotenv').config();
 
+//getting data needed for client's home page
 const getClientHomeData = async (req,res) => {
     try {
         const {clientID} = req.query;
@@ -13,4 +14,30 @@ const getClientHomeData = async (req,res) => {
     }
 }
 
-module.exports = { getClientHomeData};
+//reserving for a cient
+const reserve = async (req, res) => {
+    try {
+        const {clientID, date, medicFirstName, medicLastName, description} = req.body;
+        const {id} = await clientModel.findMedicByName(medicFirstName, medicLastName);
+        if (!id) {
+            res.status(500).json({message: 'medic not found'});
+        }
+        const reserved = await clientModel.reserve(clientID, id.toString(), date, description);
+        res.status(201).json(reserved);
+    } catch (error) {
+        res.status(500).json({ message: 'Error reserving' });
+    }
+}
+
+//getting client's already taken dates
+const getDates = async (req, res) => {
+    try {
+        const {clientID} = req.query;
+        const dates = clientModel.getDates(clientID);
+        res.status(201).json(dates);
+    } catch (error) {
+        res.status(500).json({ message: 'Error getting data' });
+    }
+}
+
+module.exports = { getClientHomeData, reserve, getDates};
