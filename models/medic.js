@@ -6,14 +6,13 @@ const getMedicHomeData = async (medicID) => {
 }
 
 // get 5 rows of medic's calendar
-const getMedicHomeCalander = async (medicID) => {
-    const now = new Date().toISOString().split('T')[0];
-    return (await pool.query(`SELECT * FROM calendars WHERE medic_id = $1 AND DATE(date) = DATE($2) ORDER BY date ASC LIMIT 5;`,[medicID, now]));
+const getMedicHomeCalander = async (medicID, selectedDate) => {
+    return (await pool.query(`SELECT * FROM calendars WHERE medic_id = $1 AND DATE(date) = $2 ORDER BY date ASC LIMIT 5;`,[medicID, selectedDate]));
 }
 
 // get 5 rows of medic's suivi patiet for his home page
 const getMedicHomeClients = async (medicID) => {
-    return ((await pool.query('SELECT * FROM suivi_patients WHERE medic_id = $1 ORDER BY next_session ASC LIMIT 5', [medicID])).rows);
+    return (await pool.query('SELECT * FROM suivi_patients WHERE medic_id = $1 ORDER BY next_session ASC LIMIT 5', [medicID]));
 }
 
 //get all calendar for the medic

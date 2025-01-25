@@ -1,23 +1,53 @@
 const jwt = require('jsonwebtoken');
 const medicModel = require('../models/medic');
+const clientModel = require('../models/client');
 require('dotenv').config();
 
 // getting medic dome data
 const getMedicHomeData = async (req,res) => {
+    const getClientById = async (item, one) => {
+        let result = await clientModel.findMedicById(item.client_id);
+        if (one) {
+            return {...result, detail: item.detail};
+
+        } 
+        console.log("rahi wa3ra");
+
+        return {...result, detail: item.detail, next_session: item.next_session};
+    }
     try {
-        const {medicID} = req.query;
+        //get the dentistId from the cookie
+        const medicCookie = req.cookies.user_data;
+        if (!medicCookie) {
+          return res.status(401).json({ message: 'Unauthorized' });
+        }
+      
+        const medicData = JSON.parse(medicCookie);
+        const medicID = medicData.id;
+        const selectedDate = req.query.date || new Date().toLocaleDateString().split('T')[0]; // Default to today
+
 
         // getting medic informations for his home page
-        medicModel.getMedicHomeData(medicID);
+        const medicHomeInfo = (await medicModel.getMedicHomeData(medicID)).rows;
 
         // getting medic last 5 rows of his calendar for his home page
-        medicModel.getMedicHomeCalander(medicID);
-
+        const medicHomeCalendarGlobal = (await medicModel.getMedicHomeCalander(medicID, selectedDate)).rows;
+        console.log("B: "+medicHomeCalendarGlobal);
+        const medicHomeCalendar = await Promise.all(medicHomeCalendarGlobal.map((item) => getClientById(item, true)));
+        console.log("A");
         // getting medic lsat 5 rows of his suivi patients for his home page
-        medicModel.getMedicHomeClients(medicID);
+        const medicHomeSpecialsGlobal = (await medicModel.getMedicHomeClients(medicID)).rows;
+        console.log(medicHomeSpecialsGlobal);
+        const medicHomeSpecials = await Promise.all(medicHomeSpecialsGlobal.map((item) => getClientById(item, false)));
+        console.log(medicHomeSpecials);
 
-
-        res.status(201).json({message: "medic home done"});
+        const medicHomeData = {
+            medicHomeCalendar: medicHomeCalendar,
+            medicHomeInfo: medicHomeInfo,
+            medicHomeSpecials: medicHomeSpecials
+        }
+        console.log("AAA: "+medicHomeData.medicHomeCalendar);
+        res.status(201).json(medicHomeData);
     } catch (error) {
         res.status(500).json({ message: 'Error getting medic home' });
     }

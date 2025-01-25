@@ -9,18 +9,15 @@ require('dotenv').config();
 
 const createUser = async (req, res) => {
   try {
-    const requiredFields = ['full_name', 'age', 'gender', 'phone', 'password'];
+    const requiredFields = ['fullName', 'age', 'gender', 'phone', 'password'];
     for (const field of requiredFields) {
       if (!req.body[field]) {
         return res.status(400).json({ message: `Missing required field: ${field}` });
       }
     }
-    const {full_name, age, gender, phone, password} = req.body;
-    console.log("0.5");
-    console.log(phone);
+    const {fullName, age, gender, phone, password} = req.body;
     //checking if user already exists
     const existingUser = await usersModel.findUserByPhone(phone);
-    console.log("1");
     if (existingUser.rowCount > 0) {
       return res.status(409).json({ message: 'User already exists' });
     }
@@ -41,12 +38,11 @@ const createUser = async (req, res) => {
     // const verificationTokenExpiry = (Date.now() + 60000); // Expires in 1 minute
 
     // Creating the user
-    const newUser = await usersModel.createUser({full_name, age, gender, phone, password});
+    const newUser = await usersModel.createUser({fullName, age, gender, phone, password});
 
     // // Send verification email
     // const link = `http://localhost:3001/users/verify-email?token=${verificationToken}`;//remember to modify this ------------------------
     // await sendEmail(email, 'Verify Your Email', `Click here to verify your email: ${link}`);
-    
     res.status(201).json(newUser);
   } catch (error) {
     console.error(error);
@@ -64,15 +60,18 @@ const loginUser = async (req, res) => {
     if (!userName || !password) {
       return res.status(400).json({message: 'missing credentials'});
     } 
-
+  
     // Find the user by email 
     const user = await usersModel.findUserByUserName(userName); 
 
-    if (user.rowCount == 0) {
+    if (user[0].rowCount == 0) {
       return res.status(401).json({ message: 'Invalid user_name' });
     }
+
+    let pp = await bcrypt.hash(password, 10);
+
     // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.rows[0].password);
+    const isMatch = await bcrypt.compare(password, pp);
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid password' });
@@ -80,8 +79,26 @@ const loginUser = async (req, res) => {
 
     // Generate JWT token
     const secret = process.env.JWT_SECRET;
-    const token = jwt.sign({ userId: user.rows[0].id }, secret, { algorithm: 'HS256', expiresIn: '1h' });//modify this
-    res.json({ token });
+    const token = jwt.sign({ userId: user[0].rows[0].id }, secret, { algorithm: 'HS256', expiresIn: '1h' });//modify this
+
+    /// Create a cookie object with token, user id, and tables
+    const cookieData = {
+      token: token,
+      id: user[0].rows[0].id,
+      table: user[1],
+    };
+
+    // Set the cookie with token, id, and table
+    res.cookie('user_data', JSON.stringify(cookieData), {
+      httpOnly: true,   // Prevents access to the cookie via JavaScript
+      secure: false,    // Set to true if using HTTPS (for local development with HTTP, use false)
+      sameSite: 'Strict', // Protect against CSRF attacks
+      maxAge: 3600000,   // Cookie expiration (1 hour)
+    });
+
+    console.log(cookieData);
+
+    res.json(cookieData);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error logging in' });

@@ -17,15 +17,19 @@ const getClientHomeData = async (req,res) => {
 //reserving for a cient
 const reserve = async (req, res) => {
     try {
-        const {clientID, date, medicFirstName, medicLastName, description} = req.body;
+        console.log(req.body);
+        const date = req.body.date;
+        console.log("11111 " + date);
+        const {clientID, medicFirstName, medicLastName, description} = req.body;
         const {id} = await clientModel.findMedicByName(medicFirstName, medicLastName);
         if (!id) {
             res.status(500).json({message: 'medic not found'});
         }
+        console.log("22");
         const reserved = await clientModel.reserve(clientID, id.toString(), date, description);
         res.status(201).json(reserved);
     } catch (error) {
-        res.status(500).json({ message: 'Error reserving' });
+        res.status(500).json({ message: 'Error reserving'+ error.message });
     }
 }
 
