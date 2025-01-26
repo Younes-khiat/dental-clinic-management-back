@@ -2,7 +2,7 @@ const pool = require('../db');
 
 // get from DB medic infos for his home page
 const getMedicHomeData = async (medicID) => {
-    return (await pool.query('SELECT * FROM medics WHERE id = $1 LIMIT 1',[medicID]));
+    return ((await pool.query('SELECT * FROM medics WHERE id = $1 LIMIT 1',[medicID])).rows);
 }
 
 // get 5 rows of medic's calendar
@@ -12,7 +12,7 @@ const getMedicHomeCalander = async (medicID, selectedDate) => {
 
 // get 5 rows of medic's suivi patiet for his home page
 const getMedicHomeClients = async (medicID) => {
-    return (await pool.query('SELECT * FROM suivi_patients WHERE medic_id = $1 ORDER BY next_session ASC LIMIT 5', [medicID]));
+    return ((await pool.query('SELECT * FROM suivi_patients WHERE medic_id = $1 ORDER BY next_session ASC LIMIT 5', [medicID])).rows);
 }
 
 //get all calendar for the medic

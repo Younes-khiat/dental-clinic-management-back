@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const validator= require('validator');
 const jwt = require('jsonwebtoken');
 const usersModel = require('../models/users');
+const medicsModel = require('../models/medic');
 // const sendEmail = require('./sendEmailVerification');
 require('dotenv').config();
 // const extractImageInfo = require ('./extractImageInfo');
@@ -88,6 +89,47 @@ const loginUser = async (req, res) => {
       table: user[1],
     };
 
+    //initialize data object for feedbacks and calendar and specials stock data
+    const data = {
+      feedbacks: [],
+      calendar: [],
+      stock: [],
+      specials: [],
+    };
+
+    //sending data of the tables if it is dentist
+    if (user[1] == 'dentist') {
+      const dentistCalendar = await medicsModel.getMedicCalendar(user[0].rows[0].id);
+      data.calendar = dentistCalendar.length > 0 ? dentistCalendar : [] ;
+      console.log(data.calendar);
+      const dentistSuiviPatients = await medicsModel.getMedicHomeClients(user[0].rows[0].id);
+      data.specials = dentistSuiviPatients;
+
+      for (let i = 0; i < data.calendar.length; i++) {
+        const clientInfo = await usersModel.findUserById(data.calendar[i].client_id);
+        data.calendar[i].full_name = clientInfo.full_name;
+        data.calendar[i].phone_number = clientInfo.phone_number;
+      }
+
+      // Fetch full_name and phone_number for each client in specials
+      for (let i = 0; i < data.specials.length; i++) {
+        const clientInfo = await usersModel.findUserById(data.specials[i].client_id);
+        data.specials[i].full_name = clientInfo.full_name;
+        data.specials[i].phone_number = clientInfo.phone_number;
+      }
+      console.log(data);
+    }
+    
+
+    //response object
+    const responseData = {
+      cookieData: cookieData,
+      name: user[0].rows[0].name,
+      number: user[0].rows[0].phone_number,
+      message: 'Login successful',
+      data: data,
+    };
+
     // Set the cookie with token, id, and table
     res.cookie('user_data', JSON.stringify(cookieData), {
       httpOnly: true,   // Prevents access to the cookie via JavaScript
@@ -96,9 +138,7 @@ const loginUser = async (req, res) => {
       maxAge: 3600000,   // Cookie expiration (1 hour)
     });
 
-    console.log(cookieData);
-
-    res.json(cookieData);
+    res.status(200).json(responseData);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error logging in' });
